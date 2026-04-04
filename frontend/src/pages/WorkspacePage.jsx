@@ -95,10 +95,25 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
   const lines = script.split('\n').map(l => l.trim()).filter(Boolean)
   const currentMode = MODES.find(m => m.id === mode)
 
-  // Auto-distribute on script or totalSec change (paste/gpt modes)
+  // 스크립트 변경 시 자막 목록 실시간 반영
   useEffect(() => {
-    if (mode !== 'paste' && mode !== 'gpt') return
-    setSegments(distribute(script, totalSec))
+    if (!mode || mode === null) return
+    if (mode === 'upload') {
+      // SRT 모드: 타이밍은 유지하고 텍스트만 동기화
+      const lines = script.split('\n').map(l => l.trim()).filter(Boolean)
+      if (!lines.length) { setSegments([]); return }
+      setSegments(prev => {
+        const avgDur = prev.length > 0 ? (prev[prev.length - 1]?.end || 2) / prev.length : 2
+        return lines.map((line, i) => ({
+          index: i + 1,
+          start: prev[i]?.start ?? parseFloat((i * avgDur).toFixed(2)),
+          end: prev[i]?.end ?? parseFloat(((i + 1) * avgDur).toFixed(2)),
+          text: line,
+        }))
+      })
+    } else {
+      setSegments(distribute(script, totalSec))
+    }
   }, [script, totalSec, mode])
 
   function resetMode() {
@@ -230,9 +245,10 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
             {m.icon} {m.label}
           </button>
         ))}
+        <div style={{ width: 1, height: 18, background: '#2a2a2a', margin: '0 2px' }} />
         <button
           onClick={resetMode}
-          style={{ marginLeft: 'auto', background: 'transparent', color: '#444', fontSize: 12, padding: '6px 12px', border: '1px solid #2a2a2a', borderRadius: 20 }}
+          style={{ background: 'transparent', color: '#444', fontSize: 12, padding: '6px 12px', border: '1px solid #2a2a2a', borderRadius: 20 }}
         >
           ✕ 처음으로
         </button>
@@ -314,7 +330,13 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
           {mode === 'upload' && (
             <>
               <div style={card}>
-                <h2 style={title}>SRT 파일 업로드</h2>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={title}>SRT 파일 업로드</h2>
+                  <button onClick={() => { setScript(''); setSegments([]); setUploadError('') }}
+                    style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
+                    초기화
+                  </button>
+                </div>
                 <p style={{ fontSize: 13, color: '#555' }}>업로드하면 왼쪽 자막 목록과 아래 대본에 자동으로 반영됩니다.</p>
                 <input ref={fileRef} type="file" accept=".srt" onChange={handleSRTUpload} style={{ display: 'none' }} />
                 <button onClick={() => fileRef.current.click()} style={{ background: '#2a2a2a', color: '#ccc', width: 'fit-content' }}>
@@ -342,11 +364,17 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
             <div style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={title}>대본 자동 생성</h2>
-                {getApiKey() && (
-                  <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
-                    {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
-                  </span>
-                )}
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  {getApiKey() && (
+                    <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
+                      {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
+                    </span>
+                  )}
+                  <button onClick={() => { setKeyword(''); setCustomPrompt(''); setScript(''); setSegments([]) }}
+                    style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
+                    초기화
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -399,7 +427,13 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
           {/* 대본 편집 (paste + gpt) */}
           {(mode === 'paste' || mode === 'gpt') && (
             <div style={card}>
-              <h2 style={title}>대본</h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={title}>대본</h2>
+                <button onClick={() => { setScript(''); setSegments([]) }}
+                  style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
+                  초기화
+                </button>
+              </div>
               <p style={{ fontSize: 12, color: '#555' }}>줄바꿈(Enter) 기준으로 자막이 나뉩니다.</p>
               <textarea
                 value={script}
