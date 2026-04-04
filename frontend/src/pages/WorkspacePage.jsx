@@ -425,14 +425,6 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
             </div>
           )}
 
-          {segments.length > 0 && (
-            <button
-              onClick={() => downloadSRT(segments)}
-              style={{ width: '100%', background: '#6c63ff', color: '#fff', marginTop: 12, padding: '11px' }}
-            >
-              💾 SRT 파일 로컬에 저장하기
-            </button>
-          )}
         </div>
 
         {/* ── RIGHT: mode content ── */}
@@ -691,6 +683,20 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
               <p style={{ fontSize: 12, color: '#555' }}>
                 줄당 자동 {(totalSec / lines.length).toFixed(1)}초 배분
               </p>
+            </div>
+          )}
+
+          {/* SRT 저장 */}
+          {(mode === 'paste' || mode === 'gpt') && segments.length > 0 && (
+            <div style={card}>
+              <h2 style={title}>💾 SRT 파일 저장</h2>
+              <p style={{ fontSize: 12, color: '#555' }}>현재 자막 목록을 SRT 파일로 로컬에 저장합니다.</p>
+              <button
+                onClick={() => downloadSRT(segments)}
+                style={{ background: '#6c63ff', color: '#fff', width: 'fit-content' }}
+              >
+                💾 SRT 파일 로컬에 저장하기
+              </button>
             </div>
           )}
 
