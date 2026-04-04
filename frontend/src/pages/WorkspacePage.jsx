@@ -78,8 +78,7 @@ const MODES = [
 ]
 
 // ── main component ────────────────────────────────────────
-export default function WorkspacePage({ segments, setSegments, script, setScript, settings }) {
-  const [mode, setMode] = useState(null)
+export default function WorkspacePage({ segments, setSegments, script, setScript, settings, mode, setMode }) {
   const [totalSec, setTotalSec] = useState(30)
   const [keyword, setKeyword] = useState('')
   const [tone, setTone] = useState('진지한')

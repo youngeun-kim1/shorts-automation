@@ -29,6 +29,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('workspace')
   const [segments, setSegments] = useState([])
   const [script, setScript] = useState('')
+  const [workspaceMode, setWorkspaceMode] = useState(null)
   const [settings, setSettings] = useState(loadSettings)
   const [showSettings, setShowSettings] = useState(false)
 
@@ -128,6 +129,7 @@ export default function App() {
             segments={segments} setSegments={setSegments}
             script={script} setScript={setScript}
             settings={settings}
+            mode={workspaceMode} setMode={setWorkspaceMode}
           />
         )}
         {activeTab === 'audio' && (
