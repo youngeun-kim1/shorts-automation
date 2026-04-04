@@ -32,6 +32,9 @@ export default function App() {
   const [script, setScript] = useState('')
   const [workspaceMode, setWorkspaceMode] = useState(null)
   const [settings, setSettings] = useState(loadSettings)
+  const [metaResult, setMetaResult] = useState(null)
+  const [metaKeyword, setMetaKeyword] = useState('')
+  const [metaSelectedTitle, setMetaSelectedTitle] = useState(0)
 
   useEffect(() => {
     localStorage.setItem('shorts-settings', JSON.stringify(settings))
@@ -130,7 +133,12 @@ export default function App() {
           <AudioPage setSegments={setSegments} />
         )}
         {activeTab === 'youtube' && (
-          <MetaPage script={script} settings={settings} updateSettings={updateSettings} />
+          <MetaPage
+            script={script} settings={settings} updateSettings={updateSettings}
+            metaResult={metaResult} setMetaResult={setMetaResult}
+            metaKeyword={metaKeyword} setMetaKeyword={setMetaKeyword}
+            metaSelectedTitle={metaSelectedTitle} setMetaSelectedTitle={setMetaSelectedTitle}
+          />
         )}
       </div>
 

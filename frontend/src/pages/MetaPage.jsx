@@ -18,34 +18,31 @@ function CopyButton({ text }) {
   )
 }
 
-export default function MetaPage({ script, settings, updateSettings }) {
-  const [keyword, setKeyword] = useState('')
+export default function MetaPage({ script, settings, updateSettings, metaResult, setMetaResult, metaKeyword, setMetaKeyword, metaSelectedTitle, setMetaSelectedTitle }) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [result, setResult] = useState(null)
-  const [selectedTitle, setSelectedTitle] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
 
   const hasScript = script && script.trim().length > 0
 
   async function handleGenerate() {
     if (!hasScript) return
-    setLoading(true); setError(''); setResult(null)
+    setLoading(true); setError(''); setMetaResult(null)
     try {
       const res = await fetch(`${API_BASE}/api/meta/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           script,
-          keyword,
+          keyword: metaKeyword,
           provider: settings?.provider || 'openai',
           api_key: settings?.provider === 'claude' ? settings?.claudeKey : settings?.openaiKey,
           model: settings?.provider === 'claude' ? (settings?.claudeModel || '') : (settings?.openaiModel || ''),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).detail || '오류 발생')
-      setResult(await res.json())
-      setSelectedTitle(0)
+      setMetaResult(await res.json())
+      setMetaSelectedTitle(0)
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -84,42 +81,52 @@ export default function MetaPage({ script, settings, updateSettings }) {
           <p style={lbl}>추가 키워드 (선택)</p>
           <input
             placeholder="예) 직장인, 20대, 퇴근 후 루틴"
-            value={keyword}
-            onChange={e => setKeyword(e.target.value)}
+            value={metaKeyword}
+            onChange={e => setMetaKeyword(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleGenerate()}
           />
         </div>
 
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !hasScript}
-          style={{ background: '#ef4444', color: '#fff', width: 'fit-content', fontWeight: 600 }}
-        >
-          {loading ? '생성 중...' : '▶️ 메타데이터 생성'}
-        </button>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleGenerate}
+            disabled={loading || !hasScript}
+            style={{ background: '#ef4444', color: '#fff', width: 'fit-content', fontWeight: 600 }}
+          >
+            {loading ? '생성 중...' : '▶️ 메타데이터 생성'}
+          </button>
+          {metaResult && (
+            <button
+              onClick={() => { setMetaResult(null); setMetaKeyword(''); setMetaSelectedTitle(0) }}
+              style={{ background: 'transparent', color: '#444', fontSize: 12, padding: '6px 12px', border: '1px solid #2a2a2a', borderRadius: 20 }}
+            >
+              ✕ 다시 시작
+            </button>
+          )}
+        </div>
         {error && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{error}</p>}
       </div>
 
       {/* 결과 */}
-      {result && (
+      {metaResult && (
         <>
           {/* 제목 */}
           <div style={card}>
             <h3 style={sectionTitle}>📌 제목 추천 (클릭해서 선택)</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {result.titles.map((t, i) => (
+              {metaResult.titles.map((t, i) => (
                 <div
                   key={i}
-                  onClick={() => setSelectedTitle(i)}
+                  onClick={() => setMetaSelectedTitle(i)}
                   style={{
-                    background: selectedTitle === i ? '#1a1640' : '#1a1a1a',
-                    border: `1px solid ${selectedTitle === i ? '#6c63ff' : '#2a2a2a'}`,
+                    background: metaSelectedTitle === i ? '#1a1640' : '#1a1a1a',
+                    border: `1px solid ${metaSelectedTitle === i ? '#6c63ff' : '#2a2a2a'}`,
                     borderRadius: 8, padding: '12px 14px',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                     cursor: 'pointer', gap: 10,
                   }}
                 >
-                  <span style={{ fontSize: 14, color: selectedTitle === i ? '#fff' : '#ccc' }}>{t}</span>
+                  <span style={{ fontSize: 14, color: metaSelectedTitle === i ? '#fff' : '#ccc' }}>{t}</span>
                   <CopyButton text={t} />
                 </div>
               ))}
@@ -130,11 +137,11 @@ export default function MetaPage({ script, settings, updateSettings }) {
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={sectionTitle}>📝 설명란</h3>
-              <CopyButton text={result.description} />
+              <CopyButton text={metaResult.description} />
             </div>
             <textarea
               readOnly
-              value={result.description}
+              value={metaResult.description}
               rows={5}
               style={{ fontSize: 13, lineHeight: 1.7, color: '#ccc', cursor: 'text' }}
             />
@@ -144,10 +151,10 @@ export default function MetaPage({ script, settings, updateSettings }) {
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={sectionTitle}>🏷️ 태그</h3>
-              <CopyButton text={result.tags.join(', ')} />
+              <CopyButton text={metaResult.tags.join(', ')} />
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {result.tags.map((tag, i) => (
+              {metaResult.tags.map((tag, i) => (
                 <span key={i} style={{
                   background: '#1e1e2e', border: '1px solid #3a3a5a',
                   borderRadius: 20, padding: '4px 12px', fontSize: 12, color: '#a0a0ff',
@@ -162,14 +169,14 @@ export default function MetaPage({ script, settings, updateSettings }) {
           <div style={card}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={sectionTitle}>🖼️ 썸네일 문구</h3>
-              <CopyButton text={result.thumbnail} />
+              <CopyButton text={metaResult.thumbnail} />
             </div>
             <div style={{
               background: '#111', border: '2px solid #333', borderRadius: 10,
               padding: '28px', textAlign: 'center',
             }}>
               <p style={{ fontSize: 28, fontWeight: 900, color: '#fff', letterSpacing: -0.5 }}>
-                {result.thumbnail}
+                {metaResult.thumbnail}
               </p>
             </div>
           </div>
