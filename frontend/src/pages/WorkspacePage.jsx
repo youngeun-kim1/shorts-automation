@@ -72,9 +72,9 @@ const LENGTHS = [
   { value: '60s', label: '60초', sec: 60 },
 ]
 const MODES = [
-  { id: 'upload', icon: '📂', label: 'SRT 업로드', desc: '기존 SRT 파일 불러오기' },
-  { id: 'paste', icon: '✏️', label: '직접 입력', desc: '대본 복붙 또는 직접 작성' },
   { id: 'gpt', icon: '✨', label: 'GPT 생성', desc: '대본 자동 생성 (GPT / Claude)' },
+  { id: 'paste', icon: '✏️', label: '직접 입력', desc: '대본 복붙 또는 직접 작성' },
+  { id: 'upload', icon: '📂', label: 'SRT 업로드', desc: '기존 SRT 파일 불러오기' },
 ]
 
 // ── main component ────────────────────────────────────────
