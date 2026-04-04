@@ -45,7 +45,8 @@ export default function App() {
     <>
       <style>{`
         * { box-sizing: border-box; }
-        body { background: #0f0f0f; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; }
+        html, body { background: #0f0f0f; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; margin: 0; display: flex; justify-content: center; width: 100%; }
+        #root { width: 100%; max-width: 1100px; }
         button { border: none; border-radius: 8px; cursor: pointer; padding: 10px 18px; font-size: 14px; transition: opacity 0.15s; }
         button:hover:not(:disabled) { opacity: 0.85; }
         button:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -71,7 +72,7 @@ export default function App() {
         }
       `}</style>
 
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px' }}>
+      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '0 16px', width: '100%' }}>
 
         {/* ── Header ── */}
         <header style={{
