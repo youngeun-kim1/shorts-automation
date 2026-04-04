@@ -122,32 +122,58 @@ const MODES = [
   { id: 'upload', icon: '📂', label: 'SRT 업로드', desc: '기존 SRT 파일 불러오기' },
 ]
 
-function loadGptForm() {
-  try { return JSON.parse(localStorage.getItem('gpt-form-state')) || {} } catch { return {} }
+function loadUserTemplates() {
+  try { return JSON.parse(localStorage.getItem('user-templates')) || [] } catch { return [] }
 }
 
 // ── main component ────────────────────────────────────────
 export default function WorkspacePage({ segments, setSegments, script, setScript, settings, mode, setMode }) {
   const [totalSec, setTotalSec] = useState(30)
-  const [keyword, setKeyword] = useState(() => loadGptForm().keyword || '')
-  const [tone, setTone] = useState(() => loadGptForm().tone || '진지한')
-  const [gptLength, setGptLength] = useState(() => loadGptForm().gptLength || '30s')
-  const [customPrompt, setCustomPrompt] = useState(() => loadGptForm().customPrompt || '')
-  const [selectedTemplate, setSelectedTemplate] = useState(() => loadGptForm().selectedTemplate || null)
+  const [keyword, setKeyword] = useState('')
+  const [tone, setTone] = useState('진지한')
+  const [gptLength, setGptLength] = useState('30s')
+  const [customPrompt, setCustomPrompt] = useState('')
+  const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [userTemplates, setUserTemplates] = useState(loadUserTemplates)
+  const [showTemplates, setShowTemplates] = useState(false)
+  const [saveNameInput, setSaveNameInput] = useState('')
+  const [showSaveInput, setShowSaveInput] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [uploadError, setUploadError] = useState('')
   const [ttsLoading, setTtsLoading] = useState(false)
   const [ttsUrl, setTtsUrl] = useState(null)
-  const [showTemplates, setShowTemplates] = useState(false)
   const [originalScript, setOriginalScript] = useState('')
   const [originalSegments, setOriginalSegments] = useState([])
   const fileRef = useRef()
 
-  // 자동 저장
+  // userTemplates → localStorage 동기화
   useEffect(() => {
-    localStorage.setItem('gpt-form-state', JSON.stringify({ keyword, tone, gptLength, customPrompt, selectedTemplate }))
-  }, [keyword, tone, gptLength, customPrompt, selectedTemplate])
+    localStorage.setItem('user-templates', JSON.stringify(userTemplates))
+  }, [userTemplates])
+
+  const allTemplates = [...PROMPT_TEMPLATES, ...userTemplates]
+
+  function saveTemplate() {
+    const name = saveNameInput.trim()
+    if (!name) return
+    const t = { label: name, keyword, tone, customPrompt, isUser: true }
+    setUserTemplates(prev => [...prev.filter(x => x.label !== name), t])
+    setSelectedTemplate(name)
+    setSaveNameInput('')
+    setShowSaveInput(false)
+  }
+
+  function deleteUserTemplate(label, e) {
+    e.stopPropagation()
+    setUserTemplates(prev => prev.filter(x => x.label !== label))
+    if (selectedTemplate === label) setSelectedTemplate(null)
+  }
+
+  function resetUserTemplates() {
+    setUserTemplates([])
+    setShowTemplates(false)
+  }
 
   const lines = script.split('\n').map(l => l.trim()).filter(Boolean)
   const currentMode = MODES.find(m => m.id === mode)
@@ -307,6 +333,13 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
   // ── workspace ─────────────────────────────────────────
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+      <style>{`
+        @media (max-width: 700px) {
+          .workspace-split { flex-direction: column !important; }
+          .right-panel { order: -1; }
+          .left-panel { width: 100% !important; max-width: 100% !important; min-width: 0 !important; position: static !important; max-height: none !important; }
+        }
+      `}</style>
 
       {/* 서브 탭 + 처음으로 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -403,7 +436,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
         </div>
 
         {/* ── RIGHT: mode content ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="right-panel" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* SRT 업로드 모드 */}
           {mode === 'upload' && (
@@ -498,7 +531,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                   <p style={lbl}>추가 지시사항 (선택)</p>
                   <div style={{ position: 'relative' }}>
                     <button
-                      onClick={() => setShowTemplates(v => !v)}
+                      onClick={() => { setShowTemplates(v => !v); setShowSaveInput(false) }}
                       style={{ background: '#2a2a2a', color: selectedTemplate ? '#6c63ff' : '#aaa', fontSize: 12, padding: '4px 12px', border: `1px solid ${selectedTemplate ? '#6c63ff44' : '#333'}` }}
                     >
                       📋 {selectedTemplate || '저장된 프롬프트'} {showTemplates ? '▲' : '▼'}
@@ -507,9 +540,9 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                       <div style={{
                         position: 'absolute', right: 0, top: '110%', zIndex: 100,
                         background: '#1e1e1e', border: '1px solid #333', borderRadius: 10,
-                        minWidth: 240, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                        minWidth: 260, boxShadow: '0 8px 24px rgba(0,0,0,0.5)', overflow: 'hidden',
                       }}>
-                        {PROMPT_TEMPLATES.map(t => {
+                        {allTemplates.map(t => {
                           const active = selectedTemplate === t.label
                           return (
                             <div
@@ -526,10 +559,28 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                               onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
                             >
                               <span style={{ width: 14, flexShrink: 0, color: '#6c63ff' }}>{active ? '✓' : ''}</span>
-                              {t.label}
+                              <span style={{ flex: 1 }}>{t.label}</span>
+                              {t.isUser && (
+                                <span
+                                  onClick={e => deleteUserTemplate(t.label, e)}
+                                  style={{ color: '#555', fontSize: 12, padding: '0 2px', lineHeight: 1 }}
+                                  onMouseEnter={e => e.currentTarget.style.color = '#ff6b6b'}
+                                  onMouseLeave={e => e.currentTarget.style.color = '#555'}
+                                >✕</span>
+                              )}
                             </div>
                           )
                         })}
+                        {userTemplates.length > 0 && (
+                          <div
+                            onClick={resetUserTemplates}
+                            style={{ padding: '8px 14px', fontSize: 12, color: '#555', cursor: 'pointer', textAlign: 'center' }}
+                            onMouseEnter={e => e.currentTarget.style.color = '#ff6b6b'}
+                            onMouseLeave={e => e.currentTarget.style.color = '#555'}
+                          >
+                            ⟳ 내 템플릿 초기화
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -541,6 +592,28 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                   onChange={e => { setCustomPrompt(e.target.value); setSelectedTemplate(null) }}
                   style={{ fontSize: 13, lineHeight: 1.6 }}
                 />
+                {/* 현재 설정 저장 */}
+                {!showSaveInput ? (
+                  <button
+                    onClick={() => { setShowSaveInput(true); setSaveNameInput(selectedTemplate || '') }}
+                    style={{ alignSelf: 'flex-start', background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px', marginTop: 4 }}
+                  >
+                    💾 현재 설정 저장
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 4 }}>
+                    <input
+                      autoFocus
+                      placeholder="템플릿 이름"
+                      value={saveNameInput}
+                      onChange={e => setSaveNameInput(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveTemplate(); if (e.key === 'Escape') setShowSaveInput(false) }}
+                      style={{ flex: 1, fontSize: 13, padding: '5px 10px' }}
+                    />
+                    <button onClick={saveTemplate} style={{ background: '#6c63ff', color: '#fff', fontSize: 12, padding: '5px 12px' }}>저장</button>
+                    <button onClick={() => setShowSaveInput(false)} style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '5px 10px' }}>취소</button>
+                  </div>
+                )}
               </div>
 
               <button
