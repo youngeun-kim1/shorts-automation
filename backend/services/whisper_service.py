@@ -2,8 +2,6 @@ import os
 import tempfile
 from openai import OpenAI
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 
 def transcribe_audio(audio_bytes: bytes, filename: str) -> list[dict]:
     """
@@ -17,6 +15,7 @@ def transcribe_audio(audio_bytes: bytes, filename: str) -> list[dict]:
         tmp_path = tmp.name
 
     try:
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", ""))
         with open(tmp_path, "rb") as f:
             result = client.audio.transcriptions.create(
                 model="whisper-1",
