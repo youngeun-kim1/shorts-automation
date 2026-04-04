@@ -11,8 +11,8 @@ const AI_LINKS = [
 
 const TABS = [
   { id: 'workspace', label: '📝 대본 & 자막' },
-  { id: 'audio', label: '🎙️ 음성 처리' },
   { id: 'youtube', label: '🎬 YouTube' },
+  { id: 'audio', label: '🎙️ 음성 처리' },
 ]
 
 function loadSettings() {
@@ -163,19 +163,21 @@ export default function App() {
                 style={{ background: 'transparent', color: '#666', padding: '4px 8px', fontSize: 18 }}>✕</button>
             </div>
 
-            {/* Provider 선택 */}
+            {/* 사용할 AI 선택 */}
             <div>
-              <p style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>AI 제공자</p>
+              <p style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>대본 생성에 사용할 AI</p>
               <div style={{ display: 'flex', gap: 8 }}>
                 {[
-                  { id: 'openai', label: '🤖 OpenAI (GPT-4o)' },
+                  { id: 'openai', label: '🤖 OpenAI' },
                   { id: 'claude', label: '🟠 Claude' },
                 ].map(p => (
                   <button key={p.id} onClick={() => updateSettings({ provider: p.id })}
                     style={{
-                      flex: 1, background: settings.provider === p.id ? '#6c63ff' : '#2a2a2a',
+                      flex: 1,
+                      background: settings.provider === p.id ? '#6c63ff' : '#2a2a2a',
                       color: settings.provider === p.id ? '#fff' : '#888',
                       padding: '10px 8px', fontSize: 13,
+                      outline: settings.provider === p.id ? '2px solid #6c63ff' : 'none',
                     }}>
                     {p.label}
                   </button>
@@ -184,30 +186,30 @@ export default function App() {
             </div>
 
             {/* OpenAI Key */}
-            <div>
-              <p style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>OpenAI API Key</p>
+            <div style={{ border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#10a37f', margin: 0 }}>🤖 OpenAI API Key</p>
               <input
                 type="password"
                 placeholder="sk-proj-..."
                 value={settings.openaiKey}
                 onChange={e => updateSettings({ openaiKey: e.target.value })}
               />
-              <p style={{ fontSize: 11, color: '#444', marginTop: 4 }}>
-                비워두면 서버 환경변수 키 사용
+              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>
+                platform.openai.com · 비워두면 서버 환경변수 키 사용
               </p>
             </div>
 
             {/* Claude Key */}
-            <div>
-              <p style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Claude API Key</p>
+            <div style={{ border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#d4936a', margin: 0 }}>🟠 Claude API Key</p>
               <input
                 type="password"
                 placeholder="sk-ant-..."
                 value={settings.claudeKey}
                 onChange={e => updateSettings({ claudeKey: e.target.value })}
               />
-              <p style={{ fontSize: 11, color: '#444', marginTop: 4 }}>
-                Claude 선택 시 필요 · anthropic.com에서 발급
+              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>
+                console.anthropic.com · Claude 선택 시 필요
               </p>
             </div>
 

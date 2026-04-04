@@ -319,9 +319,11 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
             <div style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={title}>대본 자동 생성</h2>
-                <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
-                  {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
-                </span>
+                {getApiKey() && (
+                  <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
+                    {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
+                  </span>
+                )}
               </div>
 
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>

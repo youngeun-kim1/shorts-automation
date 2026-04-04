@@ -25,6 +25,7 @@ export default function MetaPage({ script, settings }) {
   const [selectedTitle, setSelectedTitle] = useState(0)
 
   const hasScript = script && script.trim().length > 0
+  const activeKey = settings?.provider === 'claude' ? settings?.claudeKey : settings?.openaiKey
 
   async function handleGenerate() {
     if (!hasScript) return
@@ -54,9 +55,11 @@ export default function MetaPage({ script, settings }) {
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={title}>🎬 YouTube 메타데이터 생성</h2>
-          <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
-            {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
-          </span>
+          {activeKey && (
+            <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
+              {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
+            </span>
+          )}
         </div>
 
         {/* 대본 상태 표시 */}
