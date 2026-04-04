@@ -163,54 +163,62 @@ export default function App() {
                 style={{ background: 'transparent', color: '#666', padding: '4px 8px', fontSize: 18 }}>✕</button>
             </div>
 
-            {/* 사용할 AI 선택 */}
-            <div>
-              <p style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>대본 생성에 사용할 AI</p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[
-                  { id: 'openai', label: '🤖 OpenAI' },
-                  { id: 'claude', label: '🟠 Claude' },
-                ].map(p => (
-                  <button key={p.id} onClick={() => updateSettings({ provider: p.id })}
-                    style={{
-                      flex: 1,
-                      background: settings.provider === p.id ? '#6c63ff' : '#2a2a2a',
-                      color: settings.provider === p.id ? '#fff' : '#888',
-                      padding: '10px 8px', fontSize: 13,
-                      outline: settings.provider === p.id ? '2px solid #6c63ff' : 'none',
-                    }}>
-                    {p.label}
-                  </button>
-                ))}
-              </div>
+            {/* 현재 사용 중 표시 */}
+            <div style={{ background: '#111', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#555' }}>현재 사용 중</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: settings.provider === 'claude' ? '#d4936a' : '#10a37f' }}>
+                {settings.provider === 'claude' ? '🟠 Claude' : '🤖 OpenAI GPT-4o'}
+              </span>
             </div>
 
             {/* OpenAI Key */}
-            <div style={{ border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#10a37f', margin: 0 }}>🤖 OpenAI API Key</p>
+            <div style={{ border: `1px solid ${settings.provider === 'openai' ? '#6c63ff55' : '#2a2a2a'}`, borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#10a37f', margin: 0 }}>🤖 OpenAI API Key</p>
+                <button
+                  onClick={() => updateSettings({ provider: 'openai' })}
+                  style={{
+                    background: settings.provider === 'openai' ? '#10a37f22' : 'transparent',
+                    color: settings.provider === 'openai' ? '#10a37f' : '#555',
+                    border: `1px solid ${settings.provider === 'openai' ? '#10a37f55' : '#2a2a2a'}`,
+                    padding: '3px 10px', fontSize: 12, borderRadius: 12,
+                  }}
+                >
+                  {settings.provider === 'openai' ? '✓ 사용 중' : '사용하기'}
+                </button>
+              </div>
               <input
                 type="password"
                 placeholder="sk-proj-..."
                 value={settings.openaiKey}
                 onChange={e => updateSettings({ openaiKey: e.target.value })}
               />
-              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>
-                platform.openai.com · 비워두면 서버 환경변수 키 사용
-              </p>
+              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>platform.openai.com · 비워두면 서버 환경변수 키 사용</p>
             </div>
 
             {/* Claude Key */}
-            <div style={{ border: '1px solid #2a2a2a', borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <p style={{ fontSize: 13, fontWeight: 600, color: '#d4936a', margin: 0 }}>🟠 Claude API Key</p>
+            <div style={{ border: `1px solid ${settings.provider === 'claude' ? '#d4936a55' : '#2a2a2a'}`, borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: '#d4936a', margin: 0 }}>🟠 Claude API Key</p>
+                <button
+                  onClick={() => updateSettings({ provider: 'claude' })}
+                  style={{
+                    background: settings.provider === 'claude' ? '#d4936a22' : 'transparent',
+                    color: settings.provider === 'claude' ? '#d4936a' : '#555',
+                    border: `1px solid ${settings.provider === 'claude' ? '#d4936a55' : '#2a2a2a'}`,
+                    padding: '3px 10px', fontSize: 12, borderRadius: 12,
+                  }}
+                >
+                  {settings.provider === 'claude' ? '✓ 사용 중' : '사용하기'}
+                </button>
+              </div>
               <input
                 type="password"
                 placeholder="sk-ant-..."
                 value={settings.claudeKey}
                 onChange={e => updateSettings({ claudeKey: e.target.value })}
               />
-              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>
-                console.anthropic.com · Claude 선택 시 필요
-              </p>
+              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>console.anthropic.com · Claude 선택 시 필요</p>
             </div>
 
             <button

@@ -161,6 +161,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
       const parsed = parseSRT(ev.target.result)
       if (!parsed.length) { setUploadError('자막을 읽을 수 없습니다.'); return }
       setSegments(parsed)
+      setScript(parsed.map(s => s.text).join('\n'))
     }
     reader.readAsText(file, 'utf-8')
     e.target.value = ''
@@ -213,17 +214,25 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-      {/* 현재 모드 배지 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <span style={{
-          background: '#2a2a2a', border: '1px solid #333',
-          padding: '6px 14px', borderRadius: 20, fontSize: 13, color: '#ccc',
-        }}>
-          {currentMode?.icon} {currentMode?.label}
-        </span>
+      {/* 서브 탭 + 처음으로 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+        {MODES.map(m => (
+          <button
+            key={m.id}
+            onClick={() => setMode(m.id)}
+            style={{
+              background: mode === m.id ? '#6c63ff' : '#1e1e1e',
+              color: mode === m.id ? '#fff' : '#666',
+              border: `1px solid ${mode === m.id ? '#6c63ff' : '#2a2a2a'}`,
+              padding: '7px 14px', fontSize: 13, borderRadius: 20,
+            }}
+          >
+            {m.icon} {m.label}
+          </button>
+        ))}
         <button
           onClick={resetMode}
-          style={{ background: 'transparent', color: '#555', fontSize: 13, padding: '4px 10px', border: '1px solid #2a2a2a', borderRadius: 20 }}
+          style={{ marginLeft: 'auto', background: 'transparent', color: '#444', fontSize: 12, padding: '6px 12px', border: '1px solid #2a2a2a', borderRadius: 20 }}
         >
           ✕ 처음으로
         </button>
@@ -303,15 +312,29 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
 
           {/* SRT 업로드 모드 */}
           {mode === 'upload' && (
-            <div style={card}>
-              <h2 style={title}>SRT 파일 업로드</h2>
-              <p style={{ fontSize: 13, color: '#555' }}>업로드하면 왼쪽 자막 목록에 자동으로 반영됩니다.</p>
-              <input ref={fileRef} type="file" accept=".srt" onChange={handleSRTUpload} style={{ display: 'none' }} />
-              <button onClick={() => fileRef.current.click()} style={{ background: '#2a2a2a', color: '#ccc', width: 'fit-content' }}>
-                📂 파일 선택
-              </button>
-              {uploadError && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{uploadError}</p>}
-            </div>
+            <>
+              <div style={card}>
+                <h2 style={title}>SRT 파일 업로드</h2>
+                <p style={{ fontSize: 13, color: '#555' }}>업로드하면 왼쪽 자막 목록과 아래 대본에 자동으로 반영됩니다.</p>
+                <input ref={fileRef} type="file" accept=".srt" onChange={handleSRTUpload} style={{ display: 'none' }} />
+                <button onClick={() => fileRef.current.click()} style={{ background: '#2a2a2a', color: '#ccc', width: 'fit-content' }}>
+                  📂 파일 선택
+                </button>
+                {uploadError && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{uploadError}</p>}
+              </div>
+              {script && (
+                <div style={card}>
+                  <h2 style={title}>📄 대본 (SRT에서 추출)</h2>
+                  <textarea
+                    value={script}
+                    onChange={e => setScript(e.target.value)}
+                    rows={10}
+                    style={{ lineHeight: 1.8, fontSize: 15 }}
+                  />
+                  <p style={{ fontSize: 12, color: '#555' }}>{script.split('\n').filter(Boolean).length}줄</p>
+                </div>
+              )}
+            </>
           )}
 
           {/* GPT 생성 모드 */}
