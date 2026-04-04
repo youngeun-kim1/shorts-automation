@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+tmp/
+uploads/
+
+# Node
+node_modules/
+dist/
+.DS_Store
+*.local
+
+# Env
+.env
+.env.local
+.env.production.local
