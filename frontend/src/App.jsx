@@ -19,9 +19,10 @@ function loadSettings() {
   try {
     return JSON.parse(localStorage.getItem('shorts-settings')) || {
       provider: 'openai', openaiKey: '', claudeKey: '',
+      openaiModel: 'gpt-5.4-mini', claudeModel: 'claude-3-5-sonnet-20241022',
     }
   } catch {
-    return { provider: 'openai', openaiKey: '', claudeKey: '' }
+    return { provider: 'openai', openaiKey: '', claudeKey: '', openaiModel: 'gpt-5.4-mini', claudeModel: 'claude-3-5-sonnet-20241022' }
   }
 }
 
@@ -31,7 +32,6 @@ export default function App() {
   const [script, setScript] = useState('')
   const [workspaceMode, setWorkspaceMode] = useState(null)
   const [settings, setSettings] = useState(loadSettings)
-  const [showSettings, setShowSettings] = useState(false)
 
   useEffect(() => {
     localStorage.setItem('shorts-settings', JSON.stringify(settings))
@@ -99,13 +99,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* Settings button */}
-            <button
-              onClick={() => setShowSettings(true)}
-              style={{ background: '#1e1e1e', color: '#888', padding: '7px 14px', fontSize: 13, border: '1px solid #2a2a2a' }}
-            >
-              ⚙️ 설정
-            </button>
           </div>
         </header>
 
@@ -129,7 +122,7 @@ export default function App() {
           <WorkspacePage
             segments={segments} setSegments={setSegments}
             script={script} setScript={setScript}
-            settings={settings}
+            settings={settings} updateSettings={updateSettings}
             mode={workspaceMode} setMode={setWorkspaceMode}
           />
         )}
@@ -137,102 +130,10 @@ export default function App() {
           <AudioPage setSegments={setSegments} />
         )}
         {activeTab === 'youtube' && (
-          <MetaPage script={script} settings={settings} />
+          <MetaPage script={script} settings={settings} updateSettings={updateSettings} />
         )}
       </div>
 
-      {/* ── Settings Modal ── */}
-      {showSettings && (
-        <div
-          onClick={() => setShowSettings(false)}
-          style={{
-            position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000, padding: 16,
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            style={{
-              background: '#1a1a1a', borderRadius: 16, padding: '28px 24px',
-              width: '100%', maxWidth: 440,
-              border: '1px solid #2a2a2a',
-              display: 'flex', flexDirection: 'column', gap: 20,
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h2 style={{ fontSize: 16, fontWeight: 700, color: '#fff', margin: 0 }}>⚙️ 설정</h2>
-              <button onClick={() => setShowSettings(false)}
-                style={{ background: 'transparent', color: '#666', padding: '4px 8px', fontSize: 18 }}>✕</button>
-            </div>
-
-            {/* 현재 사용 중 표시 */}
-            <div style={{ background: '#111', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: '#555' }}>현재 사용 중</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: settings.provider === 'claude' ? '#d4936a' : '#10a37f' }}>
-                {settings.provider === 'claude' ? '🟠 Claude' : '🤖 OpenAI GPT-4o'}
-              </span>
-            </div>
-
-            {/* OpenAI Key */}
-            <div style={{ border: `1px solid ${settings.provider === 'openai' ? '#6c63ff55' : '#2a2a2a'}`, borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#10a37f', margin: 0 }}>🤖 OpenAI API Key</p>
-                <button
-                  onClick={() => updateSettings({ provider: 'openai' })}
-                  style={{
-                    background: settings.provider === 'openai' ? '#10a37f22' : 'transparent',
-                    color: settings.provider === 'openai' ? '#10a37f' : '#555',
-                    border: `1px solid ${settings.provider === 'openai' ? '#10a37f55' : '#2a2a2a'}`,
-                    padding: '3px 10px', fontSize: 12, borderRadius: 12,
-                  }}
-                >
-                  {settings.provider === 'openai' ? '✓ 사용 중' : '사용하기'}
-                </button>
-              </div>
-              <input
-                type="password"
-                placeholder="sk-proj-..."
-                value={settings.openaiKey}
-                onChange={e => updateSettings({ openaiKey: e.target.value })}
-              />
-              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>platform.openai.com · 비워두면 서버 환경변수 키 사용</p>
-            </div>
-
-            {/* Claude Key */}
-            <div style={{ border: `1px solid ${settings.provider === 'claude' ? '#d4936a55' : '#2a2a2a'}`, borderRadius: 10, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={{ fontSize: 13, fontWeight: 600, color: '#d4936a', margin: 0 }}>🟠 Claude API Key</p>
-                <button
-                  onClick={() => updateSettings({ provider: 'claude' })}
-                  style={{
-                    background: settings.provider === 'claude' ? '#d4936a22' : 'transparent',
-                    color: settings.provider === 'claude' ? '#d4936a' : '#555',
-                    border: `1px solid ${settings.provider === 'claude' ? '#d4936a55' : '#2a2a2a'}`,
-                    padding: '3px 10px', fontSize: 12, borderRadius: 12,
-                  }}
-                >
-                  {settings.provider === 'claude' ? '✓ 사용 중' : '사용하기'}
-                </button>
-              </div>
-              <input
-                type="password"
-                placeholder="sk-ant-..."
-                value={settings.claudeKey}
-                onChange={e => updateSettings({ claudeKey: e.target.value })}
-              />
-              <p style={{ fontSize: 11, color: '#444', margin: 0 }}>console.anthropic.com · Claude 선택 시 필요</p>
-            </div>
-
-            <button
-              onClick={() => setShowSettings(false)}
-              style={{ background: '#6c63ff', color: '#fff', width: '100%' }}
-            >
-              저장
-            </button>
-          </div>
-        </div>
-      )}
     </>
   )
 }

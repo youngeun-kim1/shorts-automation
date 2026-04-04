@@ -23,7 +23,7 @@ def get_client(api_key: str = ""):
     return OpenAI(api_key=key)
 
 
-def generate_script(keyword: str, tone: str, length: str, custom_prompt: str = "", api_key: str = "") -> str:
+def generate_script(keyword: str, tone: str, length: str, custom_prompt: str = "", api_key: str = "", model: str = "") -> str:
     client = get_client(api_key)
     tone_desc = TONE_MAP.get(tone, tone)
     length_label, word_count = LENGTH_MAP.get(length, ("60초", 160))
@@ -49,14 +49,14 @@ def generate_script(keyword: str, tone: str, length: str, custom_prompt: str = "
         base_prompt += f"\n\n추가 지시사항:\n{custom_prompt}"
 
     response = client.chat.completions.create(
-        model="gpt-5.4-mini",
+        model=model or "gpt-5.4-mini",
         messages=[{"role": "user", "content": base_prompt}],
         max_completion_tokens=1024,
     )
     return response.choices[0].message.content
 
 
-def generate_meta(script: str, keyword: str = "", api_key: str = "") -> dict:
+def generate_meta(script: str, keyword: str = "", api_key: str = "", model: str = "") -> dict:
     client = get_client(api_key)
 
     prompt = f"""유튜브 쇼츠 영상의 메타데이터를 생성해주세요.
@@ -82,7 +82,7 @@ def generate_meta(script: str, keyword: str = "", api_key: str = "") -> dict:
 - JSON만 반환, 다른 텍스트 없이"""
 
     response = client.chat.completions.create(
-        model="gpt-5.4-mini",
+        model=model or "gpt-5.4-mini",
         messages=[{"role": "user", "content": prompt}],
         max_completion_tokens=1024,
         response_format={"type": "json_object"},

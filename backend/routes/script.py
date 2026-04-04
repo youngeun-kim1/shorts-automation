@@ -12,6 +12,7 @@ class ScriptRequest(BaseModel):
     custom_prompt: str = ""
     provider: str = "openai"
     api_key: str = ""
+    model: str = ""
 
 
 class ScriptResponse(BaseModel):
@@ -25,11 +26,11 @@ def generate(req: ScriptRequest):
     try:
         if req.provider == "claude":
             script = claude_service.generate_script(
-                req.keyword, req.tone, req.length, req.custom_prompt, req.api_key
+                req.keyword, req.tone, req.length, req.custom_prompt, req.api_key, req.model
             )
         else:
             script = openai_service.generate_script(
-                req.keyword, req.tone, req.length, req.custom_prompt, req.api_key
+                req.keyword, req.tone, req.length, req.custom_prompt, req.api_key, req.model
             )
         return ScriptResponse(script=script)
     except Exception as e:

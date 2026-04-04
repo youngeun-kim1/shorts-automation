@@ -10,6 +10,7 @@ class MetaRequest(BaseModel):
     keyword: str = ""
     provider: str = "openai"
     api_key: str = ""
+    model: str = ""
 
 
 class MetaResponse(BaseModel):
@@ -25,9 +26,9 @@ def generate(req: MetaRequest):
         raise HTTPException(status_code=400, detail="대본을 입력해주세요.")
     try:
         if req.provider == "claude":
-            result = claude_service.generate_meta(req.script, req.keyword, req.api_key)
+            result = claude_service.generate_meta(req.script, req.keyword, req.api_key, req.model)
         else:
-            result = openai_service.generate_meta(req.script, req.keyword, req.api_key)
+            result = openai_service.generate_meta(req.script, req.keyword, req.api_key, req.model)
         return MetaResponse(**result)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

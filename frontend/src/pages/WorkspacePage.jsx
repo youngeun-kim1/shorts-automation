@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '../api'
+import SettingsModal, { getModelLabel } from '../components/SettingsModal'
 
 // ── helpers ──────────────────────────────────────────────
 function pad(n, len = 2) { return String(n).padStart(len, '0') }
@@ -127,7 +128,7 @@ function loadUserTemplates() {
 }
 
 // ── main component ────────────────────────────────────────
-export default function WorkspacePage({ segments, setSegments, script, setScript, settings, mode, setMode }) {
+export default function WorkspacePage({ segments, setSegments, script, setScript, settings, updateSettings, mode, setMode }) {
   const [totalSec, setTotalSec] = useState(30)
   const [keyword, setKeyword] = useState('')
   const [tone, setTone] = useState('진지한')
@@ -136,6 +137,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
   const [selectedTemplate, setSelectedTemplate] = useState(null)
   const [userTemplates, setUserTemplates] = useState(loadUserTemplates)
   const [showTemplates, setShowTemplates] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [saveNameInput, setSaveNameInput] = useState('')
   const [showSaveInput, setShowSaveInput] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -257,6 +259,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
           custom_prompt: customPrompt,
           provider: settings?.provider || 'openai',
           api_key: getApiKey() || '',
+          model: settings?.provider === 'claude' ? (settings?.claudeModel || '') : (settings?.openaiModel || ''),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).detail || '오류 발생')
@@ -306,7 +309,8 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
 
   // ── mode selector ─────────────────────────────────────
   if (!mode) {
-    return (
+    return (<>
+      {showSettings && <SettingsModal settings={settings} updateSettings={updateSettings} onClose={() => setShowSettings(false)} />}
       <div style={{ maxWidth: 520, margin: '60px auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
         <p style={{ color: '#555', fontSize: 14, textAlign: 'center', marginBottom: 4 }}>시작 방법을 선택하세요</p>
         {MODES.map(m => (
@@ -327,11 +331,12 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
           </button>
         ))}
       </div>
-    )
+    </>)
   }
 
   // ── workspace ─────────────────────────────────────────
-  return (
+  return (<>
+    {showSettings && <SettingsModal settings={settings} updateSettings={updateSettings} onClose={() => setShowSettings(false)} />}
     <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
       <style>{`
         @media (max-width: 700px) {
@@ -475,11 +480,10 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={title}>대본 자동 생성</h2>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  {getApiKey() && (
-                    <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
-                      {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-5.4-mini'}
-                    </span>
-                  )}
+                  <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
+                    {getModelLabel(settings)}
+                  </span>
+                  <button onClick={() => setShowSettings(true)} style={{ background: '#1e1e1e', color: '#666', padding: '4px 10px', fontSize: 12, border: '1px solid #2a2a2a' }}>⚙️</button>
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button onClick={handleRestore} disabled={!originalScript}
                       style={{ background: 'transparent', color: originalScript ? '#6c63ff' : '#333', fontSize: 12, border: `1px solid ${originalScript ? '#6c63ff44' : '#222'}`, padding: '4px 10px' }}>
@@ -720,7 +724,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
         </div>
       </div>
     </div>
-  )
+  </>)
 }
 
 const card = {

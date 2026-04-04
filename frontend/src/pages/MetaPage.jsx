@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { API_BASE } from '../api'
+import SettingsModal, { getModelLabel } from '../components/SettingsModal'
 
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false)
@@ -17,15 +18,15 @@ function CopyButton({ text }) {
   )
 }
 
-export default function MetaPage({ script, settings }) {
+export default function MetaPage({ script, settings, updateSettings }) {
   const [keyword, setKeyword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [result, setResult] = useState(null)
   const [selectedTitle, setSelectedTitle] = useState(0)
+  const [showSettings, setShowSettings] = useState(false)
 
   const hasScript = script && script.trim().length > 0
-  const activeKey = settings?.provider === 'claude' ? settings?.claudeKey : settings?.openaiKey
 
   async function handleGenerate() {
     if (!hasScript) return
@@ -39,6 +40,7 @@ export default function MetaPage({ script, settings }) {
           keyword,
           provider: settings?.provider || 'openai',
           api_key: settings?.provider === 'claude' ? settings?.claudeKey : settings?.openaiKey,
+          model: settings?.provider === 'claude' ? (settings?.claudeModel || '') : (settings?.openaiModel || ''),
         }),
       })
       if (!res.ok) throw new Error((await res.json()).detail || '오류 발생')
@@ -48,18 +50,20 @@ export default function MetaPage({ script, settings }) {
     finally { setLoading(false) }
   }
 
-  return (
+  return (<>
+    {showSettings && <SettingsModal settings={settings} updateSettings={updateSettings} onClose={() => setShowSettings(false)} />}
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 720 }}>
 
       {/* 입력 카드 */}
       <div style={card}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={title}>🎬 YouTube 메타데이터 생성</h2>
-          {activeKey && (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
-              {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
+              {getModelLabel(settings)}
             </span>
-          )}
+            <button onClick={() => setShowSettings(true)} style={{ background: '#1e1e1e', color: '#666', padding: '4px 10px', fontSize: 12, border: '1px solid #2a2a2a' }}>⚙️</button>
+          </div>
         </div>
 
         {/* 대본 상태 표시 */}
@@ -172,7 +176,7 @@ export default function MetaPage({ script, settings }) {
         </>
       )}
     </div>
-  )
+  </>)
 }
 
 const card = {
