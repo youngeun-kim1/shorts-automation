@@ -78,10 +78,11 @@ function AppInner() {
   `
 
   const footer = (
-    <footer style={{ borderTop: '1px solid #1e1e1e', marginTop: 60, padding: '20px 0', display: 'flex', justifyContent: 'center', gap: 24 }}>
-      <Link to="/guide" style={{ fontSize: 12, color: '#444', textDecoration: 'none' }}>사용 가이드</Link>
-      <Link to="/privacy" style={{ fontSize: 12, color: '#444', textDecoration: 'none' }}>개인정보처리방침</Link>
-      <Link to="/terms" style={{ fontSize: 12, color: '#444', textDecoration: 'none' }}>이용약관</Link>
+    <footer style={{ borderTop: '1px solid #2a2a3e', padding: '20px 24px', textAlign: 'center', fontSize: 13, color: '#6b7280', display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', marginTop: 60 }}>
+      <span>© 2026 ShortsAI</span>
+      <Link to="/guide" style={{ color: '#9ca3af', textDecoration: 'none' }}>사용 가이드</Link>
+      <Link to="/privacy" style={{ color: '#9ca3af', textDecoration: 'none' }}>개인정보처리방침</Link>
+      <Link to="/terms" style={{ color: '#9ca3af', textDecoration: 'none' }}>이용약관</Link>
     </footer>
   )
 
