@@ -51,7 +51,7 @@ def generate_script(keyword: str, tone: str, length: str, custom_prompt: str = "
     response = client.chat.completions.create(
         model="gpt-5.4-mini",
         messages=[{"role": "user", "content": base_prompt}],
-        max_tokens=1024,
+        max_completion_tokens=1024,
     )
     return response.choices[0].message.content
 
@@ -84,7 +84,7 @@ def generate_meta(script: str, keyword: str = "", api_key: str = "") -> dict:
     response = client.chat.completions.create(
         model="gpt-5.4-mini",
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=1024,
+        max_completion_tokens=1024,
         response_format={"type": "json_object"},
     )
     return json.loads(response.choices[0].message.content)
