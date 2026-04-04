@@ -485,7 +485,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   {getApiKey() && (
                     <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
-                      {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4.1'}
+                      {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-5.4-mini'}
                     </span>
                   )}
                   <div style={{ display: 'flex', gap: 6 }}>
