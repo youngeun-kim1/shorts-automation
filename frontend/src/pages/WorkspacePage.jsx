@@ -65,6 +65,45 @@ function distribute(script, totalSec) {
 }
 
 // ── constants ─────────────────────────────────────────────
+const PROMPT_TEMPLATES = [
+  {
+    label: '10대·20대 타겟',
+    keyword: '요즘 MZ 트렌드',
+    tone: '유머러스',
+    customPrompt: '10대~20대 초반 타겟으로 트렌디한 언어로 작성해줘. 이모지를 자연스럽게 활용해.',
+  },
+  {
+    label: '직장인 공감',
+    keyword: '퇴근 후 루틴',
+    tone: '진지한',
+    customPrompt: '2030 직장인 타겟으로 퇴근 후 현실 공감되는 내용으로 작성해줘.',
+  },
+  {
+    label: '질문 형식 훅',
+    keyword: '번아웃 극복',
+    tone: '동기부여',
+    customPrompt: '첫 문장을 강렬한 질문으로 시작해서 시청자의 호기심을 즉시 자극해줘.',
+  },
+  {
+    label: '숫자·데이터 활용',
+    keyword: '생산성 향상',
+    tone: '진지한',
+    customPrompt: '구체적인 숫자와 통계를 활용해서 신뢰감 있게 작성해줘.',
+  },
+  {
+    label: '감성적 스타일',
+    keyword: '혼자만의 시간',
+    tone: '진지한',
+    customPrompt: '감성적이고 시적인 표현을 사용해서 감정을 자극하는 방식으로 작성해줘.',
+  },
+  {
+    label: '영어 믹스',
+    keyword: '자기계발 루틴',
+    tone: '동기부여',
+    customPrompt: '자연스럽게 영어 단어를 섞어서 힙하고 세련된 느낌으로 작성해줘.',
+  },
+]
+
 const TONES = ['진지한', '유머러스', '동기부여']
 const LENGTHS = [
   { value: '30s', label: '30초', sec: 30 },
@@ -89,6 +128,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
   const [uploadError, setUploadError] = useState('')
   const [ttsLoading, setTtsLoading] = useState(false)
   const [ttsUrl, setTtsUrl] = useState(null)
+  const [showTemplates, setShowTemplates] = useState(false)
   const [originalScript, setOriginalScript] = useState('')
   const [originalSegments, setOriginalSegments] = useState([])
   const fileRef = useRef()
@@ -396,7 +436,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   {getApiKey() && (
                     <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
-                      {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
+                      {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4.1'}
                     </span>
                   )}
                   <div style={{ display: 'flex', gap: 6 }}>
@@ -438,7 +478,39 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
 
               {/* 자유 프롬프트 */}
               <div>
-                <p style={lbl}>추가 지시사항 (선택)</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <p style={lbl}>추가 지시사항 (선택)</p>
+                  <div style={{ position: 'relative' }}>
+                    <button
+                      onClick={() => setShowTemplates(v => !v)}
+                      style={{ background: '#2a2a2a', color: '#aaa', fontSize: 12, padding: '4px 12px', border: '1px solid #333' }}
+                    >
+                      📋 저장된 프롬프트 {showTemplates ? '▲' : '▼'}
+                    </button>
+                    {showTemplates && (
+                      <div style={{
+                        position: 'absolute', right: 0, top: '110%', zIndex: 100,
+                        background: '#1e1e1e', border: '1px solid #333', borderRadius: 10,
+                        minWidth: 220, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                      }}>
+                        {PROMPT_TEMPLATES.map(t => (
+                          <div
+                            key={t.label}
+                            onClick={() => { setKeyword(t.keyword); setTone(t.tone); setCustomPrompt(t.customPrompt); setShowTemplates(false) }}
+                            style={{
+                              padding: '10px 14px', fontSize: 13, color: '#ccc',
+                              cursor: 'pointer', borderBottom: '1px solid #2a2a2a',
+                            }}
+                            onMouseEnter={e => e.currentTarget.style.background = '#2a2a2a'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                          >
+                            {t.label}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
                 <textarea
                   rows={3}
                   placeholder="예) 10대 타겟으로 작성해줘 / 영어 단어를 섞어서 / 질문 형식으로 시작해줘"
@@ -497,16 +569,26 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
               <p style={{ fontSize: 12, color: '#555' }}>
                 총 길이를 정하면 {lines.length}줄을 균등 배분합니다.
               </p>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <p style={lbl}>영상 총 길이</p>
-                <span style={{ color: '#6c63ff', fontWeight: 700, fontSize: 22 }}>{totalSec}초</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <input
+                  type="range" min={15} max={60} step={1}
+                  value={totalSec}
+                  onChange={e => setTotalSec(parseInt(e.target.value))}
+                  style={{ flex: 1, accentColor: '#6c63ff' }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                  <input
+                    type="number" min={15} max={60} step={1}
+                    value={totalSec}
+                    onChange={e => {
+                      const v = Math.min(60, Math.max(15, parseInt(e.target.value) || 15))
+                      setTotalSec(v)
+                    }}
+                    style={{ width: 64, textAlign: 'center', padding: '6px 8px', fontSize: 15, fontWeight: 700, color: '#6c63ff' }}
+                  />
+                  <span style={{ fontSize: 13, color: '#555' }}>초</span>
+                </div>
               </div>
-              <input
-                type="range" min={15} max={60} step={1}
-                value={totalSec}
-                onChange={e => setTotalSec(parseInt(e.target.value))}
-                style={{ width: '100%', accentColor: '#6c63ff' }}
-              />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#444' }}>
                 <span>15초</span><span>60초</span>
               </div>

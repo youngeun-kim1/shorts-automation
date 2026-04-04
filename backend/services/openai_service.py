@@ -49,7 +49,7 @@ def generate_script(keyword: str, tone: str, length: str, custom_prompt: str = "
         base_prompt += f"\n\n추가 지시사항:\n{custom_prompt}"
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4.1",
         messages=[{"role": "user", "content": base_prompt}],
         max_tokens=1024,
     )
@@ -82,7 +82,7 @@ def generate_meta(script: str, keyword: str = "", api_key: str = "") -> dict:
 - JSON만 반환, 다른 텍스트 없이"""
 
     response = client.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4.1",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=1024,
         response_format={"type": "json_object"},
