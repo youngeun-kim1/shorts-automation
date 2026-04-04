@@ -90,6 +90,8 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
   const [uploadError, setUploadError] = useState('')
   const [ttsLoading, setTtsLoading] = useState(false)
   const [ttsUrl, setTtsUrl] = useState(null)
+  const [originalScript, setOriginalScript] = useState('')
+  const [originalSegments, setOriginalSegments] = useState([])
   const fileRef = useRef()
 
   const lines = script.split('\n').map(l => l.trim()).filter(Boolean)
@@ -120,8 +122,24 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
     setMode(null)
     setScript('')
     setSegments([])
+    setOriginalScript('')
+    setOriginalSegments([])
     setTtsUrl(null)
     setError('')
+  }
+
+  // 초기화: 수정 이전 상태로 복구
+  function handleRestore() {
+    setScript(originalScript)
+    setSegments(originalSegments)
+  }
+
+  // 빈 페이지: 전체 삭제
+  function handleClear(extra = {}) {
+    setScript('')
+    setSegments([])
+    if (extra.gpt) { setKeyword(''); setCustomPrompt('') }
+    if (extra.srt) { setUploadError('') }
   }
 
   function updateSegment(i, field, val) {
@@ -163,6 +181,9 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
       if (!res.ok) throw new Error((await res.json()).detail || '오류 발생')
       const data = await res.json()
       setScript(data.script)
+      const sec = LENGTHS.find(l => l.value === gptLength)?.sec || 30
+      setOriginalScript(data.script)
+      setOriginalSegments(distribute(data.script, sec))
     } catch (e) { setError(e.message) }
     finally { setLoading(false) }
   }
@@ -175,8 +196,11 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
     reader.onload = ev => {
       const parsed = parseSRT(ev.target.result)
       if (!parsed.length) { setUploadError('자막을 읽을 수 없습니다.'); return }
+      const extractedScript = parsed.map(s => s.text).join('\n')
       setSegments(parsed)
-      setScript(parsed.map(s => s.text).join('\n'))
+      setScript(extractedScript)
+      setOriginalScript(extractedScript)
+      setOriginalSegments(parsed)
     }
     reader.readAsText(file, 'utf-8')
     e.target.value = ''
@@ -332,10 +356,16 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
               <div style={card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <h2 style={title}>SRT 파일 업로드</h2>
-                  <button onClick={() => { setScript(''); setSegments([]); setUploadError('') }}
-                    style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
-                    초기화
-                  </button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={handleRestore} disabled={!originalScript}
+                      style={{ background: 'transparent', color: originalScript ? '#6c63ff' : '#333', fontSize: 12, border: `1px solid ${originalScript ? '#6c63ff44' : '#222'}`, padding: '4px 10px' }}>
+                      초기화
+                    </button>
+                    <button onClick={() => handleClear({ srt: true })}
+                      style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
+                      빈 페이지
+                    </button>
+                  </div>
                 </div>
                 <p style={{ fontSize: 13, color: '#555' }}>업로드하면 왼쪽 자막 목록과 아래 대본에 자동으로 반영됩니다.</p>
                 <input ref={fileRef} type="file" accept=".srt" onChange={handleSRTUpload} style={{ display: 'none' }} />
@@ -370,10 +400,16 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                       {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
                     </span>
                   )}
-                  <button onClick={() => { setKeyword(''); setCustomPrompt(''); setScript(''); setSegments([]) }}
-                    style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
-                    초기화
-                  </button>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <button onClick={handleRestore} disabled={!originalScript}
+                      style={{ background: 'transparent', color: originalScript ? '#6c63ff' : '#333', fontSize: 12, border: `1px solid ${originalScript ? '#6c63ff44' : '#222'}`, padding: '4px 10px' }}>
+                      초기화
+                    </button>
+                    <button onClick={() => handleClear({ gpt: true })}
+                      style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
+                      빈 페이지
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -429,10 +465,17 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
             <div style={card}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h2 style={title}>대본</h2>
-                <button onClick={() => { setScript(''); setSegments([]) }}
-                  style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
-                  초기화
-                </button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={handleRestore} disabled={!originalScript}
+                    title={!originalScript ? '직접입력은 원본이 없습니다' : ''}
+                    style={{ background: 'transparent', color: originalScript ? '#6c63ff' : '#333', fontSize: 12, border: `1px solid ${originalScript ? '#6c63ff44' : '#222'}`, padding: '4px 10px' }}>
+                    초기화
+                  </button>
+                  <button onClick={() => handleClear({})}
+                    style={{ background: 'transparent', color: '#555', fontSize: 12, border: '1px solid #2a2a2a', padding: '4px 10px' }}>
+                    빈 페이지
+                  </button>
+                </div>
               </div>
               <p style={{ fontSize: 12, color: '#555' }}>줄바꿈(Enter) 기준으로 자막이 나뉩니다.</p>
               <textarea
