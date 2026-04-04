@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { API_BASE } from '../api'
 
 // ── helpers ──────────────────────────────────────────────
+function pad(n, len = 2) { return String(n).padStart(len, '0') }
+
 function formatSRTTime(sec) {
   const h = Math.floor(sec / 3600)
   const m = Math.floor((sec % 3600) / 60)
@@ -9,7 +11,6 @@ function formatSRTTime(sec) {
   const ms = Math.round((sec % 1) * 1000)
   return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`
 }
-function pad(n, len = 2) { return String(n).padStart(len, '0') }
 
 function toMMSS(sec) {
   const m = Math.floor(sec / 60), s = Math.floor(sec % 60)
@@ -65,33 +66,48 @@ function distribute(script, totalSec) {
 
 // ── constants ─────────────────────────────────────────────
 const TONES = ['진지한', '유머러스', '동기부여']
-const LENGTHS = [{ value: '30s', label: '30초', sec: 30 }, { value: '45s', label: '45초', sec: 45 }, { value: '60s', label: '60초', sec: 60 }]
+const LENGTHS = [
+  { value: '30s', label: '30초', sec: 30 },
+  { value: '45s', label: '45초', sec: 45 },
+  { value: '60s', label: '60초', sec: 60 },
+]
 const MODES = [
   { id: 'upload', icon: '📂', label: 'SRT 업로드', desc: '기존 SRT 파일 불러오기' },
   { id: 'paste', icon: '✏️', label: '직접 입력', desc: '대본 복붙 또는 직접 작성' },
-  { id: 'gpt', icon: '✨', label: 'GPT 생성', desc: 'GPT-4o로 대본 자동 생성' },
+  { id: 'gpt', icon: '✨', label: 'GPT 생성', desc: '대본 자동 생성 (GPT / Claude)' },
 ]
 
 // ── main component ────────────────────────────────────────
-export default function WorkspacePage({ segments, setSegments }) {
+export default function WorkspacePage({ segments, setSegments, script, setScript, settings }) {
   const [mode, setMode] = useState(null)
-  const [script, setScript] = useState('')
   const [totalSec, setTotalSec] = useState(30)
   const [keyword, setKeyword] = useState('')
   const [tone, setTone] = useState('진지한')
   const [gptLength, setGptLength] = useState('30s')
+  const [customPrompt, setCustomPrompt] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [uploadError, setUploadError] = useState('')
+  const [ttsLoading, setTtsLoading] = useState(false)
+  const [ttsUrl, setTtsUrl] = useState(null)
   const fileRef = useRef()
 
   const lines = script.split('\n').map(l => l.trim()).filter(Boolean)
+  const currentMode = MODES.find(m => m.id === mode)
 
   // Auto-distribute on script or totalSec change (paste/gpt modes)
   useEffect(() => {
     if (mode !== 'paste' && mode !== 'gpt') return
     setSegments(distribute(script, totalSec))
   }, [script, totalSec, mode])
+
+  function resetMode() {
+    setMode(null)
+    setScript('')
+    setSegments([])
+    setTtsUrl(null)
+    setError('')
+  }
 
   function updateSegment(i, field, val) {
     setSegments(prev => prev.map((seg, idx) =>
@@ -109,6 +125,10 @@ export default function WorkspacePage({ segments, setSegments }) {
     setSegments(prev => prev.filter((_, idx) => idx !== i).map((s, idx) => ({ ...s, index: idx + 1 })))
   }
 
+  function getApiKey() {
+    return settings?.provider === 'claude' ? settings?.claudeKey : settings?.openaiKey
+  }
+
   async function handleGPT() {
     if (!keyword.trim()) return
     setLoading(true); setError('')
@@ -118,7 +138,12 @@ export default function WorkspacePage({ segments, setSegments }) {
       const res = await fetch(`${API_BASE}/api/script/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ keyword, tone, length: gptLength }),
+        body: JSON.stringify({
+          keyword, tone, length: gptLength,
+          custom_prompt: customPrompt,
+          provider: settings?.provider || 'openai',
+          api_key: getApiKey() || '',
+        }),
       })
       if (!res.ok) throw new Error((await res.json()).detail || '오류 발생')
       const data = await res.json()
@@ -141,11 +166,28 @@ export default function WorkspacePage({ segments, setSegments }) {
     e.target.value = ''
   }
 
+  async function handleTTS() {
+    if (!script.trim()) return
+    setTtsLoading(true)
+    setTtsUrl(null)
+    try {
+      const res = await fetch(`${API_BASE}/api/tts/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: script }),
+      })
+      if (!res.ok) throw new Error('TTS 생성 실패')
+      const blob = await res.blob()
+      setTtsUrl(URL.createObjectURL(blob))
+    } catch (e) { setError(e.message) }
+    finally { setTtsLoading(false) }
+  }
+
   // ── mode selector ─────────────────────────────────────
   if (!mode) {
     return (
       <div style={{ maxWidth: 520, margin: '60px auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <p style={{ color: '#666', fontSize: 14, textAlign: 'center', marginBottom: 8 }}>시작 방법을 선택하세요</p>
+        <p style={{ color: '#555', fontSize: 14, textAlign: 'center', marginBottom: 4 }}>시작 방법을 선택하세요</p>
         {MODES.map(m => (
           <button
             key={m.id}
@@ -159,7 +201,7 @@ export default function WorkspacePage({ segments, setSegments }) {
             <span style={{ fontSize: 28 }}>{m.icon}</span>
             <div>
               <p style={{ fontWeight: 700, fontSize: 15, marginBottom: 4 }}>{m.label}</p>
-              <p style={{ color: '#666', fontSize: 13 }}>{m.desc}</p>
+              <p style={{ color: '#555', fontSize: 13 }}>{m.desc}</p>
             </div>
           </button>
         ))}
@@ -169,171 +211,191 @@ export default function WorkspacePage({ segments, setSegments }) {
 
   // ── workspace ─────────────────────────────────────────
   return (
-    <div className="workspace-split" style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
-      {/* ── LEFT: subtitle list (sticky) ── */}
-      <div className="left-panel" style={{
-        width: 340, flexShrink: 0,
-        position: 'sticky', top: 80,
-        maxHeight: 'calc(100vh - 120px)', overflowY: 'auto',
-        background: '#111', borderRadius: 12, padding: '16px 14px',
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
-            자막 목록 {segments.length > 0 && <span style={{ color: '#6c63ff' }}>({segments.length})</span>}
-          </p>
-          <button onClick={addSegment} style={{ background: '#2a2a2a', color: '#aaa', padding: '4px 10px', fontSize: 12 }}>+ 추가</button>
-        </div>
-
-        {segments.length === 0 ? (
-          <p style={{ color: '#333', fontSize: 13, textAlign: 'center', padding: '30px 0' }}>
-            {mode === 'upload' ? 'SRT 파일을 업로드하세요' : '우측에 대본을 입력하세요'}
-          </p>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {segments.map((seg, i) => (
-              <div key={i} style={{ background: '#1a1a1a', borderRadius: 8, padding: '10px 12px', border: '1px solid #222' }}>
-                {/* index + remove */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <span style={{ color: '#555', fontSize: 11, fontWeight: 700 }}>#{seg.index}</span>
-                  <button onClick={() => removeSegment(i)} style={{ background: 'transparent', color: '#333', padding: '2px 6px', fontSize: 13 }}>✕</button>
-                </div>
-                {/* text */}
-                <input
-                  value={seg.text}
-                  onChange={e => updateSegment(i, 'text', e.target.value)}
-                  placeholder="자막 텍스트"
-                  style={{ fontSize: 13, fontWeight: 600, background: '#111', border: '1px solid #2a2a2a', marginBottom: 8 }}
-                />
-                {/* timing inputs */}
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>시작 (초)</p>
-                    <input
-                      type="number" step="0.1" min="0"
-                      value={seg.start}
-                      onChange={e => updateSegment(i, 'start', e.target.value)}
-                      style={{ fontSize: 13, padding: '5px 8px', textAlign: 'center' }}
-                    />
-                  </div>
-                  <span style={{ color: '#333', fontSize: 12, marginTop: 14 }}>→</span>
-                  <div style={{ flex: 1 }}>
-                    <p style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>종료 (초)</p>
-                    <input
-                      type="number" step="0.1" min="0"
-                      value={seg.end}
-                      onChange={e => updateSegment(i, 'end', e.target.value)}
-                      style={{ fontSize: 13, padding: '5px 8px', textAlign: 'center' }}
-                    />
-                  </div>
-                </div>
-                <p style={{ fontSize: 10, color: '#333', fontFamily: 'monospace', marginTop: 6 }}>
-                  {toMMSS(seg.start)} → {toMMSS(seg.end)} · {(seg.end - seg.start).toFixed(1)}s
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* SRT 다운로드 */}
-        {segments.length > 0 && (
-          <button
-            onClick={() => downloadSRT(segments)}
-            style={{ width: '100%', background: '#6c63ff', color: '#fff', marginTop: 12, padding: '10px' }}
-          >
-            ⬇️ SRT 다운로드
-          </button>
-        )}
+      {/* 현재 모드 배지 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <span style={{
+          background: '#2a2a2a', border: '1px solid #333',
+          padding: '6px 14px', borderRadius: 20, fontSize: 13, color: '#ccc',
+        }}>
+          {currentMode?.icon} {currentMode?.label}
+        </span>
+        <button
+          onClick={resetMode}
+          style={{ background: 'transparent', color: '#555', fontSize: 13, padding: '4px 10px', border: '1px solid #2a2a2a', borderRadius: 20 }}
+        >
+          ✕ 처음으로
+        </button>
       </div>
 
-      {/* ── RIGHT: mode content ── */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div className="workspace-split" style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
 
-        {/* 모드 변경 */}
-        <button
-          onClick={() => { setMode(null); setScript(''); setSegments([]) }}
-          style={{ background: 'transparent', color: '#555', fontSize: 13, padding: '6px 0', width: 'fit-content' }}
-        >
-          ← 시작 화면으로
-        </button>
-
-        {/* SRT 업로드 모드 */}
-        {mode === 'upload' && (
-          <div style={card}>
-            <h2 style={title}>SRT 파일 업로드</h2>
-            <p style={{ fontSize: 13, color: '#666' }}>업로드하면 왼쪽 자막 목록에 자동으로 반영됩니다.</p>
-            <input ref={fileRef} type="file" accept=".srt" onChange={handleSRTUpload} style={{ display: 'none' }} />
-            <button onClick={() => fileRef.current.click()} style={{ background: '#2a2a2a', color: '#ccc', width: 'fit-content' }}>
-              📂 파일 선택
-            </button>
-            {uploadError && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{uploadError}</p>}
+        {/* ── LEFT: subtitle list (sticky) ── */}
+        <div className="left-panel" style={{
+          width: '45%', minWidth: 260, maxWidth: 480, flexShrink: 0,
+          position: 'sticky', top: 16,
+          maxHeight: 'calc(100vh - 100px)', overflowY: 'auto',
+          background: '#111', borderRadius: 12, padding: '16px 14px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
+              자막 목록 {segments.length > 0 && <span style={{ color: '#6c63ff' }}>({segments.length})</span>}
+            </p>
+            <button onClick={addSegment} style={{ background: '#2a2a2a', color: '#aaa', padding: '4px 10px', fontSize: 12 }}>+ 추가</button>
           </div>
-        )}
 
-        {/* GPT 생성 모드 */}
-        {mode === 'gpt' && (
-          <div style={card}>
-            <h2 style={title}>GPT-4o 대본 생성</h2>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ flex: 1, minWidth: 160 }}>
-                <p style={lbl}>키워드 / 주제</p>
-                <input
-                  placeholder="예) 번아웃 극복, 아침 루틴"
-                  value={keyword}
-                  onChange={e => setKeyword(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleGPT()}
+          {segments.length === 0 ? (
+            <p style={{ color: '#333', fontSize: 13, textAlign: 'center', padding: '30px 0' }}>
+              {mode === 'upload' ? 'SRT 파일을 업로드하세요' : '우측에 대본을 입력하세요'}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {segments.map((seg, i) => (
+                <div key={i} style={{ background: '#1a1a1a', borderRadius: 8, padding: '10px 12px', border: '1px solid #222' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={{ color: '#555', fontSize: 11, fontWeight: 700 }}>#{seg.index}</span>
+                    <button onClick={() => removeSegment(i)} style={{ background: 'transparent', color: '#333', padding: '2px 6px', fontSize: 13 }}>✕</button>
+                  </div>
+                  <input
+                    value={seg.text}
+                    onChange={e => updateSegment(i, 'text', e.target.value)}
+                    placeholder="자막 텍스트"
+                    style={{ fontSize: 13, fontWeight: 600, background: '#111', border: '1px solid #2a2a2a', marginBottom: 8 }}
+                  />
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>시작 (초)</p>
+                      <input type="number" step="0.1" min="0" value={seg.start}
+                        onChange={e => updateSegment(i, 'start', e.target.value)}
+                        style={{ fontSize: 13, padding: '5px 8px', textAlign: 'center' }}
+                      />
+                    </div>
+                    <span style={{ color: '#333', fontSize: 12, marginTop: 14 }}>→</span>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 10, color: '#555', marginBottom: 3 }}>종료 (초)</p>
+                      <input type="number" step="0.1" min="0" value={seg.end}
+                        onChange={e => updateSegment(i, 'end', e.target.value)}
+                        style={{ fontSize: 13, padding: '5px 8px', textAlign: 'center' }}
+                      />
+                    </div>
+                  </div>
+                  <p style={{ fontSize: 10, color: '#333', fontFamily: 'monospace', marginTop: 6 }}>
+                    {toMMSS(seg.start)} → {toMMSS(seg.end)} · {(seg.end - seg.start).toFixed(1)}s
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {segments.length > 0 && (
+            <button
+              onClick={() => downloadSRT(segments)}
+              style={{ width: '100%', background: '#6c63ff', color: '#fff', marginTop: 12, padding: '11px' }}
+            >
+              💾 SRT 파일 로컬에 저장하기
+            </button>
+          )}
+        </div>
+
+        {/* ── RIGHT: mode content ── */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* SRT 업로드 모드 */}
+          {mode === 'upload' && (
+            <div style={card}>
+              <h2 style={title}>SRT 파일 업로드</h2>
+              <p style={{ fontSize: 13, color: '#555' }}>업로드하면 왼쪽 자막 목록에 자동으로 반영됩니다.</p>
+              <input ref={fileRef} type="file" accept=".srt" onChange={handleSRTUpload} style={{ display: 'none' }} />
+              <button onClick={() => fileRef.current.click()} style={{ background: '#2a2a2a', color: '#ccc', width: 'fit-content' }}>
+                📂 파일 선택
+              </button>
+              {uploadError && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{uploadError}</p>}
+            </div>
+          )}
+
+          {/* GPT 생성 모드 */}
+          {mode === 'gpt' && (
+            <div style={card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={title}>대본 자동 생성</h2>
+                <span style={{ fontSize: 11, color: settings?.provider === 'claude' ? '#d4936a' : '#10a37f', background: '#2a2a2a', padding: '3px 10px', borderRadius: 12 }}>
+                  {settings?.provider === 'claude' ? '🟠 Claude' : '🤖 GPT-4o'}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                <div style={{ flex: 1, minWidth: 150 }}>
+                  <p style={lbl}>키워드 / 주제</p>
+                  <input
+                    placeholder="예) 번아웃 극복, 아침 루틴"
+                    value={keyword}
+                    onChange={e => setKeyword(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleGPT()}
+                  />
+                </div>
+                <div>
+                  <p style={lbl}>분위기</p>
+                  <select value={tone} onChange={e => setTone(e.target.value)}>
+                    {TONES.map(t => <option key={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <p style={lbl}>길이</p>
+                  <select value={gptLength} onChange={e => setGptLength(e.target.value)}>
+                    {LENGTHS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              {/* 자유 프롬프트 */}
+              <div>
+                <p style={lbl}>추가 지시사항 (선택)</p>
+                <textarea
+                  rows={3}
+                  placeholder="예) 10대 타겟으로 작성해줘 / 영어 단어를 섞어서 / 질문 형식으로 시작해줘"
+                  value={customPrompt}
+                  onChange={e => setCustomPrompt(e.target.value)}
+                  style={{ fontSize: 13, lineHeight: 1.6 }}
                 />
               </div>
-              <div>
-                <p style={lbl}>분위기</p>
-                <select value={tone} onChange={e => setTone(e.target.value)}>
-                  {TONES.map(t => <option key={t}>{t}</option>)}
-                </select>
-              </div>
-              <div>
-                <p style={lbl}>길이</p>
-                <select value={gptLength} onChange={e => setGptLength(e.target.value)}>
-                  {LENGTHS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
-                </select>
-              </div>
+
+              <button
+                onClick={handleGPT}
+                disabled={loading || !keyword.trim()}
+                style={{ background: '#6c63ff', color: '#fff', width: 'fit-content' }}
+              >
+                {loading ? '생성 중...' : '✨ 대본 생성'}
+              </button>
+              {error && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{error}</p>}
             </div>
-            <button
-              onClick={handleGPT}
-              disabled={loading || !keyword.trim()}
-              style={{ background: '#6c63ff', color: '#fff', width: 'fit-content' }}
-            >
-              {loading ? '생성 중...' : '✨ 대본 생성'}
-            </button>
-            {error && <p style={{ color: '#ff6b6b', fontSize: 13 }}>{error}</p>}
-          </div>
-        )}
+          )}
 
-        {/* 대본 편집 (paste + gpt) */}
-        {(mode === 'paste' || mode === 'gpt') && (
-          <div style={card}>
-            <h2 style={title}>대본</h2>
-            <p style={{ fontSize: 12, color: '#555' }}>줄바꿈(Enter) 기준으로 자막이 나뉩니다. 수정하면 왼쪽에 즉시 반영됩니다.</p>
-            <textarea
-              value={script}
-              onChange={e => setScript(e.target.value)}
-              rows={10}
-              placeholder="대본을 여기에 입력하거나 붙여넣으세요."
-              style={{ lineHeight: 1.8, fontSize: 15 }}
-            />
-            {lines.length > 0 && (
-              <p style={{ fontSize: 12, color: '#555' }}>{lines.length}줄 입력됨</p>
-            )}
-          </div>
-        )}
+          {/* 대본 편집 (paste + gpt) */}
+          {(mode === 'paste' || mode === 'gpt') && (
+            <div style={card}>
+              <h2 style={title}>대본</h2>
+              <p style={{ fontSize: 12, color: '#555' }}>줄바꿈(Enter) 기준으로 자막이 나뉩니다.</p>
+              <textarea
+                value={script}
+                onChange={e => setScript(e.target.value)}
+                rows={10}
+                placeholder="대본을 여기에 입력하거나 붙여넣으세요."
+                style={{ lineHeight: 1.8, fontSize: 15 }}
+              />
+              {lines.length > 0 && (
+                <p style={{ fontSize: 12, color: '#555' }}>{lines.length}줄 입력됨</p>
+              )}
+            </div>
+          )}
 
-        {/* 타이밍 배분 (paste + gpt) */}
-        {(mode === 'paste' || mode === 'gpt') && lines.length > 0 && (
-          <div style={card}>
-            <h2 style={title}>영상 길이 설정</h2>
-            <p style={{ fontSize: 12, color: '#666' }}>
-              총 길이를 정하면 {lines.length}줄을 균등 배분합니다. 왼쪽에서 개별 조정 가능합니다.
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* 영상 길이 (paste + gpt) */}
+          {(mode === 'paste' || mode === 'gpt') && lines.length > 0 && (
+            <div style={card}>
+              <h2 style={title}>영상 길이 설정</h2>
+              <p style={{ fontSize: 12, color: '#555' }}>
+                총 길이를 정하면 {lines.length}줄을 균등 배분합니다.
+              </p>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <p style={lbl}>영상 총 길이</p>
                 <span style={{ color: '#6c63ff', fontWeight: 700, fontSize: 22 }}>{totalSec}초</span>
@@ -351,30 +413,34 @@ export default function WorkspacePage({ segments, setSegments }) {
                 줄당 자동 {(totalSec / lines.length).toFixed(1)}초 배분
               </p>
             </div>
+          )}
 
-            {/* 타이밍 미리보기 */}
-            <div style={{ background: '#0d0d0d', borderRadius: 8, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {segments.slice(0, 5).map((seg, i) => (
-                <div key={i} style={{ display: 'flex', gap: 10, fontSize: 12 }}>
-                  <span style={{ color: '#6c63ff', fontFamily: 'monospace', flexShrink: 0 }}>
-                    {toMMSS(seg.start)} → {toMMSS(seg.end)}
-                  </span>
-                  <span style={{ color: '#666', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    {seg.text}
-                  </span>
-                </div>
-              ))}
-              {segments.length > 5 && (
-                <p style={{ color: '#333', fontSize: 11 }}>... 외 {segments.length - 5}줄</p>
+          {/* TTS 음성 생성 (paste + gpt) */}
+          {(mode === 'paste' || mode === 'gpt') && script.trim() && (
+            <div style={card}>
+              <h2 style={title}>🔊 TTS 음성 생성</h2>
+              <p style={{ fontSize: 12, color: '#555' }}>대본을 기반으로 한국어 음성을 자동 생성합니다.</p>
+              <button
+                onClick={handleTTS}
+                disabled={ttsLoading}
+                style={{ background: '#22c55e', color: '#fff', width: 'fit-content' }}
+              >
+                {ttsLoading ? '생성 중...' : '🔊 음성 생성하기'}
+              </button>
+              {ttsUrl && (
+                <audio controls src={ttsUrl} style={{ width: '100%', marginTop: 4 }} />
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
 }
 
-const card = { background: '#1a1a1a', borderRadius: 12, padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 14 }
-const title = { fontSize: 15, fontWeight: 600, color: '#ccc' }
-const lbl = { fontSize: 12, color: '#777', marginBottom: 6 }
+const card = {
+  background: '#1a1a1a', borderRadius: 12, padding: '20px 24px',
+  display: 'flex', flexDirection: 'column', gap: 14,
+}
+const title = { fontSize: 15, fontWeight: 600, color: '#ccc', margin: 0 }
+const lbl = { fontSize: 12, color: '#666', marginBottom: 6 }

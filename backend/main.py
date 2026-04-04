@@ -1,7 +1,7 @@
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routes import script, subtitle, tts
+from routes import script, subtitle, tts, meta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(script.router, prefix="/api/script", tags=["script"])
 app.include_router(subtitle.router, prefix="/api/subtitle", tags=["subtitle"])
 app.include_router(tts.router, prefix="/api/tts", tags=["tts"])
+app.include_router(meta.router, prefix="/api/meta", tags=["meta"])
 
 
 @app.get("/health")

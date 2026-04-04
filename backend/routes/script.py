@@ -1,14 +1,17 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from services.openai_service import generate_script
+from services import openai_service, claude_service
 
 router = APIRouter()
 
 
 class ScriptRequest(BaseModel):
     keyword: str
-    tone: str   # 진지한 | 유머러스 | 동기부여
-    length: str  # 30s | 45s | 60s
+    tone: str
+    length: str
+    custom_prompt: str = ""
+    provider: str = "openai"
+    api_key: str = ""
 
 
 class ScriptResponse(BaseModel):
@@ -19,5 +22,15 @@ class ScriptResponse(BaseModel):
 def generate(req: ScriptRequest):
     if not req.keyword.strip():
         raise HTTPException(status_code=400, detail="키워드를 입력해주세요.")
-    script = generate_script(req.keyword, req.tone, req.length)
-    return ScriptResponse(script=script)
+    try:
+        if req.provider == "claude":
+            script = claude_service.generate_script(
+                req.keyword, req.tone, req.length, req.custom_prompt, req.api_key
+            )
+        else:
+            script = openai_service.generate_script(
+                req.keyword, req.tone, req.length, req.custom_prompt, req.api_key
+            )
+        return ScriptResponse(script=script)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
