@@ -67,6 +67,12 @@ function distribute(script, totalSec) {
 // ── constants ─────────────────────────────────────────────
 const PROMPT_TEMPLATES = [
   {
+    label: '빈 페이지',
+    keyword: '',
+    tone: '진지한',
+    customPrompt: '',
+  },
+  {
     label: '10대·20대 타겟',
     keyword: '요즘 MZ 트렌드',
     tone: '유머러스',
@@ -116,13 +122,18 @@ const MODES = [
   { id: 'upload', icon: '📂', label: 'SRT 업로드', desc: '기존 SRT 파일 불러오기' },
 ]
 
+function loadGptForm() {
+  try { return JSON.parse(localStorage.getItem('gpt-form-state')) || {} } catch { return {} }
+}
+
 // ── main component ────────────────────────────────────────
 export default function WorkspacePage({ segments, setSegments, script, setScript, settings, mode, setMode }) {
   const [totalSec, setTotalSec] = useState(30)
-  const [keyword, setKeyword] = useState('')
-  const [tone, setTone] = useState('진지한')
-  const [gptLength, setGptLength] = useState('30s')
-  const [customPrompt, setCustomPrompt] = useState('')
+  const [keyword, setKeyword] = useState(() => loadGptForm().keyword || '')
+  const [tone, setTone] = useState(() => loadGptForm().tone || '진지한')
+  const [gptLength, setGptLength] = useState(() => loadGptForm().gptLength || '30s')
+  const [customPrompt, setCustomPrompt] = useState(() => loadGptForm().customPrompt || '')
+  const [selectedTemplate, setSelectedTemplate] = useState(() => loadGptForm().selectedTemplate || null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [uploadError, setUploadError] = useState('')
@@ -132,6 +143,11 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
   const [originalScript, setOriginalScript] = useState('')
   const [originalSegments, setOriginalSegments] = useState([])
   const fileRef = useRef()
+
+  // 자동 저장
+  useEffect(() => {
+    localStorage.setItem('gpt-form-state', JSON.stringify({ keyword, tone, gptLength, customPrompt, selectedTemplate }))
+  }, [keyword, tone, gptLength, customPrompt, selectedTemplate])
 
   const lines = script.split('\n').map(l => l.trim()).filter(Boolean)
   const currentMode = MODES.find(m => m.id === mode)
@@ -458,13 +474,13 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                   <input
                     placeholder="예) 번아웃 극복, 아침 루틴"
                     value={keyword}
-                    onChange={e => setKeyword(e.target.value)}
+                    onChange={e => { setKeyword(e.target.value); setSelectedTemplate(null) }}
                     onKeyDown={e => e.key === 'Enter' && handleGPT()}
                   />
                 </div>
                 <div>
                   <p style={lbl}>분위기</p>
-                  <select value={tone} onChange={e => setTone(e.target.value)}>
+                  <select value={tone} onChange={e => { setTone(e.target.value); setSelectedTemplate(null) }}>
                     {TONES.map(t => <option key={t}>{t}</option>)}
                   </select>
                 </div>
@@ -483,30 +499,37 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                   <div style={{ position: 'relative' }}>
                     <button
                       onClick={() => setShowTemplates(v => !v)}
-                      style={{ background: '#2a2a2a', color: '#aaa', fontSize: 12, padding: '4px 12px', border: '1px solid #333' }}
+                      style={{ background: '#2a2a2a', color: selectedTemplate ? '#6c63ff' : '#aaa', fontSize: 12, padding: '4px 12px', border: `1px solid ${selectedTemplate ? '#6c63ff44' : '#333'}` }}
                     >
-                      📋 저장된 프롬프트 {showTemplates ? '▲' : '▼'}
+                      📋 {selectedTemplate || '저장된 프롬프트'} {showTemplates ? '▲' : '▼'}
                     </button>
                     {showTemplates && (
                       <div style={{
                         position: 'absolute', right: 0, top: '110%', zIndex: 100,
                         background: '#1e1e1e', border: '1px solid #333', borderRadius: 10,
-                        minWidth: 220, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                        minWidth: 240, overflow: 'hidden', boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
                       }}>
-                        {PROMPT_TEMPLATES.map(t => (
-                          <div
-                            key={t.label}
-                            onClick={() => { setKeyword(t.keyword); setTone(t.tone); setCustomPrompt(t.customPrompt); setShowTemplates(false) }}
-                            style={{
-                              padding: '10px 14px', fontSize: 13, color: '#ccc',
-                              cursor: 'pointer', borderBottom: '1px solid #2a2a2a',
-                            }}
-                            onMouseEnter={e => e.currentTarget.style.background = '#2a2a2a'}
-                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                          >
-                            {t.label}
-                          </div>
-                        ))}
+                        {PROMPT_TEMPLATES.map(t => {
+                          const active = selectedTemplate === t.label
+                          return (
+                            <div
+                              key={t.label}
+                              onClick={() => { setKeyword(t.keyword); setTone(t.tone); setCustomPrompt(t.customPrompt); setSelectedTemplate(t.label); setShowTemplates(false) }}
+                              style={{
+                                padding: '10px 14px', fontSize: 13,
+                                color: active ? '#6c63ff' : '#ccc',
+                                background: active ? '#221f3a' : 'transparent',
+                                cursor: 'pointer', borderBottom: '1px solid #2a2a2a',
+                                display: 'flex', alignItems: 'center', gap: 8,
+                              }}
+                              onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#2a2a2a' }}
+                              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
+                            >
+                              <span style={{ width: 14, flexShrink: 0, color: '#6c63ff' }}>{active ? '✓' : ''}</span>
+                              {t.label}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -515,7 +538,7 @@ export default function WorkspacePage({ segments, setSegments, script, setScript
                   rows={3}
                   placeholder="예) 10대 타겟으로 작성해줘 / 영어 단어를 섞어서 / 질문 형식으로 시작해줘"
                   value={customPrompt}
-                  onChange={e => setCustomPrompt(e.target.value)}
+                  onChange={e => { setCustomPrompt(e.target.value); setSelectedTemplate(null) }}
                   style={{ fontSize: 13, lineHeight: 1.6 }}
                 />
               </div>
