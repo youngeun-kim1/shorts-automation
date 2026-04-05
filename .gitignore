@@ -22,3 +22,10 @@ dist/
 .env
 .env.local
 .env.production.local
+
+# Upload Tool
+upload-tool/node_modules/
+upload-tool/settings.json
+upload-tool/data/channels.json
+upload-tool/data/logs.json
+upload-tool/data/thumbnails/

@@ -12,6 +12,12 @@ source venv/bin/activate
 uvicorn main:app --port 8000 &
 BACKEND_PID=$!
 
+# 업로드 API
+echo "📤 업로드 API 시작 (port 3333)..."
+cd "$ROOT/upload-tool"
+node server.js &
+UPLOAD_PID=$!
+
 # 프론트엔드
 echo "🌐 프론트엔드 시작 (port 5173)..."
 cd "$ROOT/frontend"
@@ -24,6 +30,6 @@ echo "   브라우저에서 열기 → http://localhost:5173"
 echo ""
 echo "종료하려면 Ctrl+C"
 
-# Ctrl+C 시 둘 다 종료
-trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; echo '👋 종료됨'" SIGINT SIGTERM
+# Ctrl+C 시 모두 종료
+trap "kill $BACKEND_PID $UPLOAD_PID $FRONTEND_PID 2>/dev/null; echo '👋 종료됨'" SIGINT SIGTERM
 wait
