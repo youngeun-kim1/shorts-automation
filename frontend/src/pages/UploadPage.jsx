@@ -380,7 +380,7 @@ function LogsTab({ toast }) {
 
   async function loadLogs() {
     setLoading(true)
-    try { setLogs(await api('GET', '/logs')) } catch {}
+    try { const data = await api('GET', '/logs'); setLogs(Array.isArray(data) ? data : []) } catch {}
     setLoading(false)
   }
 
