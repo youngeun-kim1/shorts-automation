@@ -102,7 +102,7 @@ function UploadTab({ toast }) {
   const thumbRef = useRef()
 
   useEffect(() => {
-    api('GET', '/channels').then(setChannels).catch(() => {})
+    api('GET', '/channels').then(data => setChannels(Array.isArray(data) ? data : [])).catch(() => {})
     if (folder) loadFiles(folder)
   }, [])
 
@@ -457,7 +457,7 @@ function SettingsTab({ toast }) {
   }
 
   async function loadChannels() {
-    try { setChannels(await api('GET', '/channels')) } catch {}
+    try { const data = await api('GET', '/channels'); setChannels(Array.isArray(data) ? data : []) } catch {}
   }
 
   async function handleJson(e) {
